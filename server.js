@@ -1,64 +1,32 @@
-const WebSocket = require('ws');
+const express = require('express');
+const http = require('http');
+const { Server } = require("socket.io");
 
-const PORT = process.env.PORT || 3000;
-const wss = new WebSocket.Server({ port: PORT });
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
-const agents = new Map();
-const controllers = new Map();
+app.get('/', (req, res) => res.send('S.Agent2 Relay is Live!'));
 
-console.log(`S Agent Relay running on port ${PORT}`);
+io.on('connection', (socket) => {
+    socket.on('join-as-host', (roomId) => {
+        socket.join(roomId);
+    });
 
-wss.on('connection', (ws) => {
-  let clientType = null;
-  let clientId = null;
+    socket.on('join-as-controller', (roomId) => {
+        socket.join(roomId);
+    });
 
-  ws.on('message', (message) => {
-    try {
-      const data = JSON.parse(message.toString());
+    socket.on('touch-event', (data) => {
+        socket.to(data.roomId).emit('perform-touch', data);
+    });
 
-      if (data.type === 'register') {
-        clientType = data.role;
-        clientId = data.id;
+    socket.on('screen-frame', (data) => {
+        socket.to(data.roomId).emit('receive-screen', data);
+    });
+});
 
-        if (clientType === 'agent') {
-          agents.set(clientId, ws);
-          console.log(`Agent connected: ${clientId}`);
-        } else if (clientType === 'controller') {
-          controllers.set(clientId, ws);
-          console.log(`Controller connected: ${clientId}`);
-        }
-
-        ws.send(JSON.stringify({ type: 'registered', role: clientType, id: clientId }));
-        return;
-      }
-
-      if (data.type === 'command' && clientType === 'controller') {
-        const agentWs = agents.get(data.targetAgentId);
-        if (agentWs && agentWs.readyState === WebSocket.OPEN) {
-          agentWs.send(JSON.stringify({
-            type: 'command',
-            action: data.action,
-            x: data.x,
-            y: data.y,
-            x2: data.x2,
-            y2: data.y2,
-            duration: data.duration
-          }));
-        }
-      }
-    } catch (err) {
-      console.error('Error:', err.message);
-    }
-  });
-
-  ws.on('close', () => {
-    if (clientType === 'agent' && clientId) {
-      agents.delete(clientId);
-      console.log(`Agent disconnected: ${clientId}`);
-    }
-    if (clientType === 'controller' && clientId) {
-      controllers.delete(clientId);
-      console.log(`Controller disconnected: ${clientId}`);
-    }
-  });
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
 });
