@@ -13,6 +13,11 @@ io.on('connection', (socket) => {
         socket.join(roomId);
     });
 
+    // Jab controller connect hone ki request bhejega
+    socket.on('request-connect', (roomId) => {
+        socket.to(roomId).emit('controller-joined');
+    });
+
     socket.on('offer', (data) => {
         socket.to(data.roomId).emit('offer', data.sdp);
     });
@@ -24,7 +29,7 @@ io.on('connection', (socket) => {
     socket.on('ice-candidate', (data) => {
         socket.to(data.roomId).emit('ice-candidate', data.candidate);
     });
-
+    
     socket.on('touch-event', (data) => {
         socket.to(data.roomId).emit('perform-touch', data);
     });
