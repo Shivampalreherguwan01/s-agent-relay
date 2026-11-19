@@ -13,7 +13,6 @@ io.on('connection', (socket) => {
         socket.join(roomId);
     });
 
-    // Jab controller connect hone ki request bhejega
     socket.on('request-connect', (roomId) => {
         socket.to(roomId).emit('controller-joined');
     });
