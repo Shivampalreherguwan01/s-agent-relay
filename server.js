@@ -4,43 +4,27 @@ const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, { cors: { origin: "*" }, maxHttpBufferSize: 1e7 });
 
-app.get('/', (req, res) => res.send('S.Agent2 WebRTC Signaling is Live!'));
+app.get('/', (req, res) => res.send('S.Agent2 Ultimate Server is Live!'));
 
 io.on('connection', (socket) => {
-    console.log("New Device Connected:", socket.id);
-
-    socket.on('join', (roomId) => {
+    socket.on('join-as-host', (roomId) => {
         socket.join(roomId);
-        console.log(`Device ${socket.id} joined room: ${roomId}`);
+        console.log(`Host joined: ${roomId}`);
     });
 
     socket.on('request-connect', (roomId) => {
-        console.log(`Controller requested to connect to room: ${roomId}`);
+        console.log(`Controller requested: ${roomId}`);
         socket.to(roomId).emit('controller-joined');
     });
 
-    socket.on('offer', (data) => {
-        console.log(`Offer sent for room: ${data.roomId}`);
-        socket.to(data.roomId).emit('offer', data.sdp);
-    });
-
-    socket.on('answer', (data) => {
-        console.log(`Answer received for room: ${data.roomId}`);
-        socket.to(data.roomId).emit('answer', data.sdp);
-    });
-
-    socket.on('ice-candidate', (data) => {
-        socket.to(data.roomId).emit('ice-candidate', data.candidate);
+    socket.on('screen-frame', (data) => {
+        socket.to(data.roomId).emit('receive-screen', data);
     });
     
     socket.on('touch-event', (data) => {
         socket.to(data.roomId).emit('perform-touch', data);
-    });
-
-    socket.on('disconnect', () => {
-        console.log("Device Disconnected:", socket.id);
     });
 });
 
